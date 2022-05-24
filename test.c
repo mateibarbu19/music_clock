@@ -7,31 +7,99 @@
 #include "rtc.h"
 #include "hw_config.h"
 
+#define delay 250
+
+#define ROTARY_ENCODER_0_A 12
+#define ROTARY_ENCODER_0_B 13
+#define ROTARY_ENCODER_0_C 11
+#define ROTARY_ENCODER_1_A 15
+#define ROTARY_ENCODER_1_B 14
+#define ROTARY_ENCODER_1_C 10
+
+void button_callback(uint gpio, uint32_t events) {
+    if (gpio == ROTARY_ENCODER_0_C) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            time = to_ms_since_boot(get_absolute_time());
+            puts("Button 0 pressed.");
+        }
+    }
+
+    if (gpio == ROTARY_ENCODER_1_C) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            time = to_ms_since_boot(get_absolute_time());
+            puts("Button 1 pressed.");
+        }
+    }
+
+    if (gpio == ROTARY_ENCODER_0_A) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            if(gpio_get(ROTARY_ENCODER_0_B)) {
+                puts("CW 0");
+            }
+            time = to_ms_since_boot(get_absolute_time());
+        }
+    }
+
+    if (gpio == ROTARY_ENCODER_0_B) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            if(gpio_get(ROTARY_ENCODER_0_A)) {
+                puts("CCW 0");
+            }
+            time = to_ms_since_boot(get_absolute_time());
+        }
+    }
+
+    if (gpio == ROTARY_ENCODER_1_B) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            if(gpio_get(ROTARY_ENCODER_1_A)) {
+                puts("CCW 1");
+            }
+            time = to_ms_since_boot(get_absolute_time());
+        }
+    }
+
+    if (gpio == ROTARY_ENCODER_1_A) {
+        static uint32_t time;
+
+        if (to_ms_since_boot(get_absolute_time()) > time + delay) {
+            if(gpio_get(ROTARY_ENCODER_1_B)) {
+                puts("CW 1");
+            }
+            time = to_ms_since_boot(get_absolute_time());
+        }
+    }
+}
+
+void buttons_init(void) {
+    gpio_set_irq_enabled_with_callback(10, GPIO_IRQ_EDGE_FALL, true, &button_callback);
+
+    for (int i = 10; i <= 15; i++) {
+        gpio_init(i);
+        gpio_set_dir(i, GPIO_IN);
+        gpio_pull_up(i);
+        gpio_set_irq_enabled(i, GPIO_IRQ_EDGE_FALL, true);
+    }
+}
+
 int main() {
-    stdio_init_all();                                                                                         
+    /* Init */
+    stdio_init_all();
     time_init();
 
-    puts("Init");
-    sleep_ms(10000);
-    puts("After init!");
-    sd_card_t *pSD = sd_get_by_num(0);
-    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-    if (FR_OK != fr) panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-    FIL fil;
+    buttons_init();
 
-    puts("Hello, world!");
-    const char* const filename = "filename.txt";
-    fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);
-    if (FR_OK != fr && FR_EXIST != fr)
-        panic("f_open(%s) error: %s (%d)\n", filename, FRESULT_str(fr), fr);
-    if (f_printf(&fil, "Hello, world!\n") < 0) {
-        printf("f_printf failed\n");
+    while (1) {
+        puts("---");
+        sleep_ms(250);
     }
-    fr = f_close(&fil);
-    if (FR_OK != fr) {
-        printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
-    }
-
-    puts("Goodbye, world!");
-    f_unmount(pSD->pcName);
 }
